@@ -13,6 +13,7 @@ import getopt
 from os import walk
 
 numberofbytes = 20
+back = False
 
 def usage():
 	print("find_magic_number.py options")
@@ -28,27 +29,45 @@ def usage():
 	print("\t\t\tnumber of bytes to read from the")
 	print("\t\t\tfile for use in the pattern discovery.")
 
-def process_file(filename):
+def process_file(filename, back):
 	global numberofbytes
 	file = open(filename, 'rb')
-	ba = bytearray()
-	ba.extend(file.read(numberofbytes))
-	file.close()
-	return ba
+	bafront = bytearray()
+	baback = bytearray()
+	bafront.extend(file.read(numberofbytes))
 	
-def transform(data=[]):
+	if back:
+		file.seek(-numberofbytes,2)
+		baback.extend(file.read(numberofbytes))
+		
+	file.close()
+	return (bafront,baback)
+	
+def transform(data,back):
 	global numberofbytes
 	# create temp
-	temp=[]
+	tempf=[]
+	tempb=[]
 	for i in range(numberofbytes):
-		temp.append([])
+		tempf.append([])
+		tempb.append([])
 	
 	for i in data:
+		fdata=i[0]
+		bdata=i[1]
+		
 		x=0
-		for j in i:
-			temp[x].append(j)
+		for j in fdata:
+			tempf[x].append(j)
 			x+=1
-	return temp
+			
+		if back:
+			x=0
+			for j in bdata:
+				tempb[x].append(j)
+				x+=1
+		
+	return (tempf,tempb)
 
 def checkEqual1(listToCheck, uniqpatterns = None,biggestpattern=()):
 	# try:
@@ -57,6 +76,9 @@ def checkEqual1(listToCheck, uniqpatterns = None,biggestpattern=()):
 		# return all(first == rest for rest in iterator)
 	# except StopIteration:
 		# return True
+	if len(listToCheck) == 0:
+		return None
+	
 	if uniqpatterns is None:
 		uniqpatterns = set()
 	
@@ -92,22 +114,34 @@ def checkEqual1(listToCheck, uniqpatterns = None,biggestpattern=()):
 	else:
 		return (biggestpattern[0],biggestpattern[1] == 100, biggestpattern[1])
 	
-def find_patterns(data=[]):
-	newdata = transform(data)
-	pattern = []
-	for i in newdata:
-		patternresult = checkEqual1(i)
-		pattern.append(patternresult)
+def find_patterns(data,back):
+	newdata = transform(data,back)
+	patternf = []
+	patternb = []
+	for i in newdata[0]:
+		patternfresult = checkEqual1(i)
+		patternf.append(patternfresult)
 	
-	return pattern
+	if back:
+		for i in newdata[1]:
+			patternbresult = checkEqual1(i)
+			patternb.append(patternfresult)
 	
-def print_pattern(pattern):
+	
+	return (patternf,patternb)
+	
+def print_pattern(pattern,back):
 	x=0
-	for i in pattern:
+	print('Front pattern')
+	for i in pattern[0]:
 		print(hex(i[0]) + "   " + str(i[1]) + "   " + str(i[2])+ "%")
+	if back:
+		print('Back pattern')
+		for i in pattern[1]:
+			print(hex(i[0]) + "   " + str(i[1]) + "   " + str(i[2])+ "%")
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], 'm:n:h', ['numberofbytes=','inputdir=', 'help'])
+    opts, args = getopt.getopt(sys.argv[1:], 'm:n:hb', ['back', 'numberofbytes=','inputdir=', 'help'])
 except getopt.GetoptError:
     usage()
     sys.exit(2)
@@ -120,6 +154,8 @@ for opt, arg in opts:
         inputdir = arg
     elif opt in ('-n', '--numberofbytes'):
         numberofbytes = int(arg)
+    elif opt in ('-b','--back'):
+        back = True
     else:
         usage()
         sys.exit(2)
@@ -131,7 +167,7 @@ for (dirpath, dirnames, filenames) in walk(inputdir):
 	
 data = []
 for file in files:
-	data.append(process_file(file))
+	data.append(process_file(file,back))
 
-pattern = find_patterns(data)
-print_pattern(pattern)	
+pattern = find_patterns(data,back)
+print_pattern(pattern,back)	
