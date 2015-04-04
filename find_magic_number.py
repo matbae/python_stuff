@@ -125,7 +125,7 @@ def find_patterns(data,back):
 	if back:
 		for i in newdata[1]:
 			patternbresult = checkEqual1(i)
-			patternb.append(patternfresult)
+			patternb.append(patternbresult)
 	
 	
 	return (patternf,patternb)
